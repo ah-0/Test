@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>لعبة تشكيلة كرة القدم</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .player {
+            width: 60px;
+            height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            color: white;
+            font-size: 12px;
+            font-weight: bold;
+            position: absolute;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            padding: 5px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        .player:hover {
+            transform: translate(-50%, -50%) scale(1.1);
+            box-shadow: 0 0 15px rgba(255, 255, 255, 0.8);
+        }
+        .goalkeeper { background: linear-gradient(to bottom, #ff6b6b, #d63031); } /* حارس */
+        .defender   { background: linear-gradient(to bottom, #4a69bd, #2e86de); } /* دفاع */
+        .midfielder { background: linear-gradient(to bottom, #f39c12, #e67e22); } /* وسط */
+        .forward    { background: linear-gradient(to bottom, #2ecc71, #27ae60); } /* هجوم */
+    </style>
+</head>
+<body class="bg-gray-800 min-h-screen flex items-center justify-center p-6">
+    <div class="bg-gray-900 bg-opacity-95 rounded-3xl shadow-2xl p-8 w-full max-w-4xl">
+        <h1 class="text-4xl font-extrabold text-white bg-gradient-to-r from-green-600 to-lime-500 p-4 rounded-t-2xl flex items-center gap-3 shadow-md mb-6">
+            <i class="fas fa-futbol text-lime-300 animate-spin-slow"></i>
+            لعبة تشكيلة كرة القدم
+        </h1>
+
+        <!-- الملعب -->
+        <div id="pitch" class="relative bg-green-800 rounded-xl p-6 mb-8 h-96 shadow-inner overflow-hidden" 
+             style="background-image: url('https://www.transparenttextures.com/patterns/grass.png');">
+            <div id="players" class="relative h-full"></div>
+        </div>
+
+        <!-- اختيار التشكيلة -->
+        <div class="flex justify-center gap-4 mb-6">
+            <select id="formationSelect" class="bg-gray-700 text-white p-2 rounded-lg">
+                <option value="4-2">4-2 (دفاعي)</option>
+                <option value="3-3">3-3 (متوازن)</option>
+                <option value="2-4">2-4 (هجومي)</option>
+            </select>
+            <button id="generateBtn" class="bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-8 rounded-full shadow-lg">
+                <i class="fas fa-random"></i> إنشاء تشكيلة
+            </button>
+            <button id="resetBtn" class="bg-gray-700 hover:bg-gray-800 text-white font-bold py-3 px-8 rounded-full shadow-lg hidden">
+                <i class="fas fa-sync-alt"></i> إعادة
+            </button>
+        </div>
+    </div>
+
+    <script>
+        const playerNames = [
+            'أحمد نور حجي',
+            'حسن عبد الغفور',
+            'عبادة عبد الوهاب',
+            'أحمد الحسن',  // سيبقى دائماً في الهجوم
+            'إسماعيل الحسن',
+            'أحمد النائب'
+        ];
+
+        const playersDiv = document.getElementById('players');
+        const generateBtn = document.getElementById('generateBtn');
+        const resetBtn = document.getElementById('resetBtn');
+        const formationSelect = document.getElementById('formationSelect');
+
+        function shuffleArray(array) {
+            return array.sort(() => Math.random() - 0.5);
+        }
+
+        function getRandomPosition(position, existingPositions) {
+            const ranges = {
+                'حارس مرمى': { top: [75, 95], left: [40, 60] },
+                'دفاع': { top: [50, 80], left: [10, 90] },
+                'وسط': { top: [25, 55], left: [15, 85] },
+                'هجوم': { top: [5, 35], left: [20, 80] }
+            };
+            const range = ranges[position];
+            const minDistance = 18;
+            let top, left;
+
+            do {
+                top = Math.random() * (range.top[1] - range.top[0]) + range.top[0];
+                left = Math.random() * (range.left[1] - range.left[0]) + range.left[0];
+            } while (!isFarEnough(top, left, existingPositions, minDistance));
+
+            return { top: `${top}%`, left: `${left}%` };
+        }
+
+        function isFarEnough(top, left, existingPositions, minDistance) {
+            for (const pos of existingPositions) {
+                const dx = Math.abs(parseFloat(pos.left) - left);
+                const dy = Math.abs(parseFloat(pos.top) - top);
+                const distance = Math.sqrt(dx * dx + dy * dy);
+                if (distance < minDistance) return false;
+            }
+            return true;
+        }
+
+        function generateTeam(formation) {
+            let positions;
+            switch (formation) {
+                case '4-2': positions = ['حارس مرمى', 'دفاع', 'دفاع', 'دفاع', 'دفاع', 'وسط']; break;
+                case '3-3': positions = ['حارس مرمى', 'دفاع', 'دفاع', 'دفاع', 'وسط', 'وسط']; break;
+                case '2-4': positions = ['حارس مرمى', 'دفاع', 'دفاع', 'وسط', 'وسط', 'هجوم']; break;
+            }
+
+            const team = [{ name: 'أحمد الحسن', position: 'هجوم' }];
+            positions = positions.filter(pos => pos !== 'هجوم');
+
+            const remainingPlayers = shuffleArray(playerNames.filter(name => name !== 'أحمد الحسن'));
+            remainingPlayers.forEach((name, index) => {
+                team.push({ name: name, position: positions[index] });
+            });
+
+            return team;
+        }
+
+        function positionPlayers(team) {
+            playersDiv.innerHTML = '';
+            const existingPositions = [];
+
+            team.forEach(player => {
+                const pos = getRandomPosition(player.position, existingPositions);
+                existingPositions.push({ top: parseFloat(pos.top), left: parseFloat(pos.left) });
+
+                const positionClass = {
+                    'حارس مرمى': 'goalkeeper',
+                    'دفاع': 'defender',
+                    'وسط': 'midfielder',
+                    'هجوم': 'forward'
+                }[player.position];
+
+                playersDiv.innerHTML += `
+                    <div class="player ${positionClass}" style="top: ${pos.top}; left: ${pos.left};">
+                        ${player.name}
+                    </div>`;
+            });
+        }
+
+        generateBtn.addEventListener('click', () => {
+            positionPlayers(generateTeam(formationSelect.value));
+            generateBtn.classList.add('hidden');
+            resetBtn.classList.remove('hidden');
+        });
+
+        resetBtn.addEventListener('click', () => {
+            playersDiv.innerHTML = '';
+            generateBtn.classList.remove('hidden');
+            resetBtn.classList.add('hidden');
+        });
+    </script>
+</body>
+</html>
