@@ -8,30 +8,53 @@
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
         .player {
-            width: 60px;
-            height: 60px;
+            width: 70px;
+            height: 70px;
             display: flex;
+            flex-direction: column;
             align-items: center;
             justify-content: center;
             border-radius: 50%;
             color: white;
-            font-size: 12px;
+            font-size: 10px;
             font-weight: bold;
             position: absolute;
             transform: translate(-50%, -50%);
             text-align: center;
             padding: 5px;
-            box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
             transition: transform 0.3s ease, box-shadow 0.3s ease;
+            cursor: pointer;
         }
         .player:hover {
-            transform: translate(-50%, -50%) scale(1.1);
+            transform: translate(-50%, -50%) scale(1.2);
             box-shadow: 0 0 15px rgba(255, 255, 255, 0.8);
         }
-        .goalkeeper { background: linear-gradient(to bottom, #ff6b6b, #d63031); } /* حارس */
-        .defender   { background: linear-gradient(to bottom, #4a69bd, #2e86de); } /* دفاع */
-        .midfielder { background: linear-gradient(to bottom, #f39c12, #e67e22); } /* وسط */
-        .forward    { background: linear-gradient(to bottom, #2ecc71, #27ae60); } /* هجوم */
+        .goalkeeper { background: #ff4757; }
+        .defender   { background: #3742fa; }
+        .midfielder { background: #f39c12; }
+        .forward    { background: #2ecc71; }
+        #playerInfo {
+           width:100px;
+            position: absolute;
+            top: 0px;
+            left: 40px;
+            transform: translateX(-50%);
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 10px;
+            padding: 10px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+            display: none;
+            text-align: center;
+            background-color: seagreen;
+           
+        }
+        #playerInfo img {
+            width: 60px;
+            height: 80px;
+            border-radius: 10px;
+            object-fit: cover;
+        }
     </style>
 </head>
 <body class="bg-gray-800 min-h-screen flex items-center justify-center p-6">
@@ -44,6 +67,10 @@
         <!-- الملعب -->
         <div id="pitch" class="relative bg-green-800 rounded-xl p-6 mb-8 h-96 shadow-inner overflow-hidden" 
              style="background-image: url('https://www.transparenttextures.com/patterns/grass.png');">
+            <div id="playerInfo">
+                <img id="playerImage" src="">
+                <p id="playerName" class="text-gray-800 font-bold mt-2"></p>
+            </div>
             <div id="players" class="relative h-full"></div>
         </div>
 
@@ -68,49 +95,35 @@
             'أحمد نور حجي',
             'حسن عبد الغفور',
             'عبادة عبد الوهاب',
-            'أحمد الحسن',  // سيبقى دائماً في الهجوم
+            'أحمد الحسن',  // يبقى دائماً في الهجوم
             'إسماعيل الحسن',
             'أحمد النائب',
             'رامز حمادة',
             'أحمد السيد'
         ];
 
+        // قاموس لربط أسماء اللاعبين بمسارات الصور
+        const playerImages = {
+            'أحمد نور حجي' : 'IMG-20250201-WA0158.jpg',
+            'حسن عبد الغفور': 'IMG-20250309-WA0041.jpg',
+            'عبادة عبد الوهاب': 'IMG-20250324-WA0009.jpg',
+            'أحمد الحسن': 'IMG-20250306-WA0019.jpg',
+            'إسماعيل الحسن': 'IMG-20250321-WA0129.jpg',
+            'أحمد النائب': 'IMG-20250324-WA0012.jpg',
+            'رامز حمادة': 'IMG-20250309-WA0041.jpg',
+            'أحمد السيد': 'IMG-20250309-WA0041.jpg'
+        };
+
         const playersDiv = document.getElementById('players');
         const generateBtn = document.getElementById('generateBtn');
         const resetBtn = document.getElementById('resetBtn');
         const formationSelect = document.getElementById('formationSelect');
+        const playerInfo = document.getElementById('playerInfo');
+        const playerImage = document.getElementById('playerImage');
+        const playerNameDisplay = document.getElementById('playerName');
 
         function shuffleArray(array) {
             return array.sort(() => Math.random() - 0.5);
-        }
-
-        function getRandomPosition(position, existingPositions) {
-            const ranges = {
-                'حارس مرمى': { top: [75, 95], left: [40, 60] },
-                'دفاع': { top: [50, 80], left: [10, 90] },
-                'وسط': { top: [25, 55], left: [15, 85] },
-                'هجوم': { top: [5, 35], left: [20, 80] }
-            };
-            const range = ranges[position];
-            const minDistance = 18;
-            let top, left;
-
-            do {
-                top = Math.random() * (range.top[1] - range.top[0]) + range.top[0];
-                left = Math.random() * (range.left[1] - range.left[0]) + range.left[0];
-            } while (!isFarEnough(top, left, existingPositions, minDistance));
-
-            return { top: `${top}%`, left: `${left}%` };
-        }
-
-        function isFarEnough(top, left, existingPositions, minDistance) {
-            for (const pos of existingPositions) {
-                const dx = Math.abs(parseFloat(pos.left) - left);
-                const dy = Math.abs(parseFloat(pos.top) - top);
-                const distance = Math.sqrt(dx * dx + dy * dy);
-                if (distance < minDistance) return false;
-            }
-            return true;
         }
 
         function generateTeam(formation) {
@@ -126,7 +139,9 @@
 
             const remainingPlayers = shuffleArray(playerNames.filter(name => name !== 'أحمد الحسن'));
             remainingPlayers.forEach((name, index) => {
-                team.push({ name: name, position: positions[index] });
+                if (index < positions.length) { // التأكد من عدم التجاوز
+                    team.push({ name: name, position: positions[index] });
+                }
             });
 
             return team;
@@ -134,23 +149,42 @@
 
         function positionPlayers(team) {
             playersDiv.innerHTML = '';
-            const existingPositions = [];
+
+            const positionCoordinates = {
+                'حارس مرمى': [{ top: '95%', left: '50%' }],
+                'دفاع': [{ top: '65%', left: '35%' }, { top: '65%', left: '65%' }, { top: '65%', left: '5%' }, { top: '65%', left: '95%' }],
+                'وسط': [{ top: '35%', left: '50%' }, { top: '35%', left: '85%' }, { top: '35%', left: '15%' }],
+                'هجوم': [{ top: '5%', left: '50%' }]
+            };
 
             team.forEach(player => {
-                const pos = getRandomPosition(player.position, existingPositions);
-                existingPositions.push({ top: parseFloat(pos.top), left: parseFloat(pos.left) });
+                const availablePositions = positionCoordinates[player.position];
+                if (availablePositions && availablePositions.length > 0) {
+                    const pos = availablePositions.shift();
+                    const positionClass = {
+                        'حارس مرمى': 'goalkeeper',
+                        'دفاع': 'defender',
+                        'وسط': 'midfielder',
+                        'هجوم': 'forward'
+                    }[player.position];
 
-                const positionClass = {
-                    'حارس مرمى': 'goalkeeper',
-                    'دفاع': 'defender',
-                    'وسط': 'midfielder',
-                    'هجوم': 'forward'
-                }[player.position];
+                    playersDiv.innerHTML += `
+                        <div class="player ${positionClass}" style="top: ${pos.top}; left: ${pos.left};" data-name="${player.name}">
+                            <span>${player.name}</span>
+                            <span style="font-size: 14px; font-weight: bold;">${Math.floor(Math.random() * 99) + 1}</span>
+                        </div>`;
+                }
+            });
 
-                playersDiv.innerHTML += `
-                    <div class="player ${positionClass}" style="top: ${pos.top}; left: ${pos.left};">
-                        ${player.name}
-                    </div>`;
+            // إضافة مستمع الأحداث لكل لاعب
+            document.querySelectorAll('.player').forEach(player => {
+                player.addEventListener('click', () => {
+                    const name = player.getAttribute('data-name');
+                    const imageSrc = playerImages[name] || 'https://via.placeholder.com/100?text=غير+متوفر'; // صورة افتراضية إذا لم توجد
+                    playerImage.src = imageSrc;
+                    playerNameDisplay.textContent = name;
+                    playerInfo.style.display = 'block';
+                });
             });
         }
 
@@ -162,8 +196,16 @@
 
         resetBtn.addEventListener('click', () => {
             playersDiv.innerHTML = '';
+            playerInfo.style.display = 'none';
             generateBtn.classList.remove('hidden');
             resetBtn.classList.add('hidden');
+        });
+
+        // إخفاء مربع المعلومات عند النقر خارج اللاعبين
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.player') && !e.target.closest('#playerInfo')) {
+                playerInfo.style.display = 'none';
+            }
         });
     </script>
 </body>
